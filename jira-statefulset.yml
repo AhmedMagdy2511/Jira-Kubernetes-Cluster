@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: jira
+spec:
+  serviceName: jira
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jira
+  template:
+    metadata:
+      labels:
+        app: jira
+    spec:
+      subdomain: jira
+      terminationGracePeriodSeconds: 300
+      initContainers:
+      - name: jirahomeperms
+        securityContext:
+        image: busybox
+        command: ["chown", "-R", "2001", "/var/atlassian/application-data/jira/"]
+        volumeMounts:
+          - mountPath: "/var/atlassian/application-data/jira/"
+            name: home  
+      - name: jirasharedperms
+        image: busybox        
+        command: ["chown", "-R", "2001:2001", "/var/atlassian/application-data/jira/shared-home"]
+        volumeMounts:
+          - mountPath: "/var/atlassian/application-data/jira/shared-home"
+            name: shared-home
+
+      containers:
+      - name: jira
+        image: atlassian/jira-software:9.4.23
+        imagePullPolicy: IfNotPresent
+        resources:
+          requests:
+            cpu: "2"
+            memory: "2Gi"
+          limits:
+            cpu: "3"
+            memory: "4Gi"
+        ports:
+        - containerPort: 8080
+        env:
+
+        - name: JVM_SUPPORT_RECOMMENDED_ARGS
+          value: "-Dupm.plugin.upload.enabled=true"
+        - name: JVM_MINIMUM_MEMORY
+          value: 1G
+        - name: JVM_MAXIMUM_MEMORY
+          value: 2G
+        - name: CLUSTERED
+          value: "true"
+        - name: JIRA_NODE_ID
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: EHCACHE_PEER_DISCOVERY
+          value: automatic
+        - name: cacheManagerPeerProviderFactory
+          value: net.sf.ehcache.distribution.RMICacheManagerPeerProviderFactory
+
+        - name: JIRA_SHARED_HOME
+          value: /var/atlassian/application-data/jira/shared-home
+        - name: ATL_JDBC_URL
+          value: "jdbc:sqlserver://;serverName=10.96.107.57;portNumber=1433;databaseName=jira" #update this with mssql ip
+        - name: ATL_JDBC_USER
+          value: "sa"
+        - name: ATL_JDBC_PASSWORD
+          value: "P@ssw0rd"
+        - name: ATL_DB_DRIVER
+          value: com.microsoft.sqlserver.jdbc.SQLServerDriver
+        - name: ATL_DB_TYPE
+          value: mssql
+        - name: ATL_DB_SCHEMA_NAME
+          value: dbo
+        volumeMounts:
+        - name: shared-home
+          mountPath: /var/atlassian/application-data/jira/shared-home
+        - name: home
+          mountPath: "/var/atlassian/application-data/jira"
+          
+
+      volumes:
+      - name: shared-home
+        persistentVolumeClaim:
+          claimName: jira-shared-home-pvc
+
+      - name: home
+        emptyDir:
+          {}
