@@ -15,17 +15,20 @@ after starting the Pod you will wait till the container is created and running y
     kubectl get pod
 
 if you run the 2 commands immediately after each other you will get:
+
 ![image](https://github.com/user-attachments/assets/36f478b3-c43b-40a7-8928-e88a9ca757ad)
 
 
 
 you can wait for a while and try again till you get:
+
 ![image](https://github.com/user-attachments/assets/6871bb3a-838d-427f-b71b-82a8442ebe02)
 
 
 this means that the container is running and the database engine started.
 
 Connect to Database
+
 the next  step is to create the database for jira:
 
   for this example we will be using "Microsoft SQL Server Management studio":
